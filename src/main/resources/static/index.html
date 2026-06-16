@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Rate Limiter Tester</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #f4f4f9; padding: 40px; display: flex; flex-direction: column; align-items: center; }
+        .container { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 500px; text-align: center; }
+        button { background: #007bff; color: white; border: none; padding: 15px 30px; font-size: 18px; border-radius: 5px; cursor: pointer; transition: 0.2s; }
+        button:active { transform: scale(0.95); }
+        .status-box { margin-top: 20px; padding: 15px; border-radius: 5px; font-weight: bold; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        #log { margin-top: 20px; text-align: left; background: #333; color: #0f0; padding: 15px; border-radius: 5px; height: 150px; overflow-y: auto; font-family: monospace; font-size: 12px; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>In-Memory Rate Limiter</h2>
+        <p>Click the button below rapidly to test the Token Bucket algorithm (Limit: 5 requests / min).</p>
+        
+        <button onclick="fetchData()">Send API Request</button>
+        
+        <div id="statusBox" class="status-box">Awaiting request...</div>
+        <div id="log"></div>
+    </div>
+
+    <script>
+        async function fetchData() {
+            const statusBox = document.getElementById('statusBox');
+            const logBox = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+
+            try {
+                const response = await fetch('/api/data');
+                const remaining = response.headers.get('X-Rate-Limit-Remaining') || 0;
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    statusBox.className = 'status-box success';
+                    statusBox.innerHTML = `200 OK<br>Tokens Remaining: ${remaining}`;
+                    logBox.innerHTML += `[${timestamp}] 200 SUCCESS - Tokens left: ${remaining}<br>`;
+                } else if (response.status === 429) {
+                    const errorData = await response.json();
+                    statusBox.className = 'status-box error';
+                    statusBox.innerHTML = `429 TOO MANY REQUESTS<br>${errorData.message}`;
+                    logBox.innerHTML += `<span style="color:red;">[${timestamp}] 429 BLOCKED - Limit exceeded</span><br>`;
+                }
+            } catch (error) {
+                console.error('Error fetching data:', error);
+            }
+
+            // Auto-scroll log to bottom
+            logBox.scrollTop = logBox.scrollHeight;
+        }
+    </script>
+</body>
+</html>
